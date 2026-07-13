@@ -2,7 +2,7 @@ import React from "react";
 
 const Footer = () => {
   return (
-    <div className="bg-gradient-to-r from-gray-800 to-gray-900 flex flex-col justify-center items-center text-white bottom-0 fixed w-full">
+    <div className="bg-gradient-to-r from-gray-800 to-gray-900 flex flex-col justify-center items-center text-white bottom-0 fixed w-full py-3 z-20">
       <div className="logo text-white font-bold text-2xl">
         <span className="text-highlight">&lt;</span>
         Crypt

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ToastContainer, toast } from "react-toastify";
-import { v4 as uuidv4 } from "uuid";
+import toast from 'react-hot-toast';
+
 
 const Manager = () => {
   const ref = useRef();
@@ -12,26 +12,25 @@ const Manager = () => {
   const [deleteId, setDeleteId] = useState(null);
 
   useEffect(() => {
-    const passwords = localStorage.getItem("passwords");
-    let passwordArray;
-    if (passwords) {
-      setPasswordArray(JSON.parse(passwords));
-    } else {
-      passwordArray = [];
-    }
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/passwords`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setPasswordArray(data);
+        } else {
+          console.error("Failed to load passwords:", data);
+        }
+      })
+      .catch(err => console.error("Error fetching passwords:", err));
   }, []);
 
   const copyText = (text) => {
-    toast("Copied to clipboard", {
-      position: "top-right",
-      autoClose: 5000,
-      hideProgressBar: false,
-      closeOnClick: false,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: "dark",
-    });
+    toast.success("Copied to clipboard");
     navigator.clipboard.writeText(text);
   };
 
@@ -54,39 +53,31 @@ const Manager = () => {
     }
   };
 
-  const savePassword = () => {
+  const savePassword = async () => {
     if (
       form.site.length > 3 &&
       form.username.length > 3 &&
       form.password.length > 3
     ) {
-      setPasswordArray([...passwordArray, { ...form, id: uuidv4() }]);
-      localStorage.setItem(
-        "passwords",
-        JSON.stringify([...passwordArray, { ...form, id: uuidv4() }])
-      );
-      setForm({ site: "", username: "", password: "" });
-      toast("Password saved successfully!", {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: false,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "dark",
-      });
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/passwords`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(form),
+        });
+        const newPassword = await response.json();
+        setPasswordArray([...passwordArray, newPassword]);
+        setForm({ site: "", username: "", password: "" });
+        toast.success("Password saved successfully!");
+      } catch (error) {
+        console.error("Error saving password:", error);
+      }
     } else {
-      toast("Error: password not saved", {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: false,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "dark",
-      });
+      toast.error("Error: password not saved");
     }
   };
 
@@ -95,24 +86,20 @@ const Manager = () => {
     setShowModal(true);
   };
 
-  const confirmDelete = () => {
-    setPasswordArray(passwordArray.filter((item) => item.id !== deleteId));
-    localStorage.setItem(
-      "passwords",
-      JSON.stringify(passwordArray.filter((item) => item.id !== deleteId))
-    );
-    toast("Password Deleted!", {
-      position: "top-right",
-      autoClose: 5000,
-      hideProgressBar: false,
-      closeOnClick: false,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: "dark",
-    });
-    setShowModal(false);
-    setDeleteId(null);
+  const confirmDelete = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/passwords/${deleteId}`, {
+        method: "DELETE",
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setPasswordArray(passwordArray.filter((item) => item.id !== deleteId));
+      toast.success("Password Deleted!");
+      setShowModal(false);
+      setDeleteId(null);
+    } catch (error) {
+      console.error("Error deleting password:", error);
+    }
   };
 
   const cancelDelete = () => {
@@ -120,30 +107,28 @@ const Manager = () => {
     setDeleteId(null);
   };
 
-  const editPassword = (id) => {
+  const editPassword = async (id) => {
     console.log("Edit", id);
     setForm(passwordArray.filter((item) => item.id === id)[0]);
     setPasswordArray(passwordArray.filter((item) => item.id !== id));
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/passwords/${id}`, {
+        method: "DELETE",
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (error) {
+      console.error("Error deleting old password during edit:", error);
+    }
   };
 
   return (
     <>
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick={false}
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
-      <div className="absolute inset-0 -z-10 h-full w-full bg-gradient-to-br from-blue-100 via-blue-100 to-blue-200">
+
+      <div className="fixed inset-0 -z-10 h-full w-full bg-gradient-to-br from-blue-100 via-blue-100 to-blue-200">
         <div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-blue-300 opacity-20 blur-[100px]"></div>
       </div>
-      <div className="p-2 md:p-0 md:mycontainer min-h-[81vh] pb-20" >
+      <div className="mycontainer min-h-[81vh] py-10 pb-20">
         <h1 className="text-4xl mt-5 font-bold text-center">
           <span className="text-highlight1">&lt;</span>
           Crypt
@@ -208,7 +193,8 @@ const Manager = () => {
           <h2 className="font-bold text-2xl py-1 text-highlight1">Your Passwords</h2>
           {passwordArray.length === 0 && <div>No passwords to show</div>}
           {passwordArray.length !== 0 && (
-            <table className="table-auto w-full rounded-md overflow-hidden mb-10">
+            <div className="overflow-x-auto w-full mb-10">
+            <table className="table-auto w-full min-w-[600px] rounded-md overflow-hidden">
               <thead className="bg-blue-800 text-white">
                 <tr>
                   <th className="py-2">Site</th>
@@ -317,6 +303,7 @@ const Manager = () => {
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>
