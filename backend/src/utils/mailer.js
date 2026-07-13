@@ -6,6 +6,7 @@ const transporter = nodemailer.createTransport({
   port: 587,
   secure: false, // upgrades to secure via STARTTLS
   requireTLS: true,
+  family: 4, // force IPv4
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
