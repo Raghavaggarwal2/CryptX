@@ -1,24 +1,21 @@
-const nodemailer = require('nodemailer');
 require('dotenv').config();
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // upgrades to secure via STARTTLS
-  requireTLS: true,
-  family: 4, // force IPv4
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
 const sendOTP = async (toEmail, otp) => {
-  const mailOptions = {
-    from: `"CryptX Security" <${process.env.EMAIL_USER}>`,
-    to: toEmail,
+  const apiKey = process.env.BREVO_API_KEY;
+  const senderEmail = process.env.EMAIL_USER;
+
+  const requestBody = {
+    sender: {
+      name: "CryptX Security",
+      email: senderEmail
+    },
+    to: [
+      {
+        email: toEmail
+      }
+    ],
     subject: 'Your CryptX Verification Code',
-    html: `
+    htmlContent: `
       <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
         <h2 style="color: #1e3a8a; text-align: center;">CryptX</h2>
         <p>Hello,</p>
@@ -36,8 +33,23 @@ const sendOTP = async (toEmail, otp) => {
   };
 
   try {
-    await transporter.sendMail(mailOptions);
-    console.log(`OTP sent to ${toEmail}`);
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'api-key': apiKey
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Brevo API error:", JSON.stringify(errorData));
+      throw new Error("Could not send email");
+    }
+    
+    console.log(`OTP sent to ${toEmail} via Brevo.`);
   } catch (error) {
     console.error("Error sending OTP email:", error);
     throw new Error("Could not send email");
