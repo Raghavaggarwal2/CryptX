@@ -1,8 +1,21 @@
+const path = require('path');
+// Load .env reliably from the backend root regardless of execution directory
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 require('dotenv').config();
 
 const sendOTP = async (toEmail, otp) => {
   const apiKey = process.env.BREVO_API_KEY;
   const senderEmail = process.env.EMAIL_USER;
+
+  if (!apiKey) {
+    console.error("Brevo Error: BREVO_API_KEY is not set in environment variables.");
+    throw new Error("Email configuration error: BREVO_API_KEY missing");
+  }
+
+  if (!senderEmail) {
+    console.error("Brevo Error: EMAIL_USER is not set in environment variables.");
+    throw new Error("Email configuration error: EMAIL_USER missing");
+  }
 
   const requestBody = {
     sender: {
@@ -44,15 +57,16 @@ const sendOTP = async (toEmail, otp) => {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({}));
       console.error("Brevo API error:", JSON.stringify(errorData));
-      throw new Error("Could not send email");
+      const reason = errorData.message || response.statusText;
+      throw new Error(`Brevo Error: ${reason}`);
     }
     
     console.log(`OTP sent to ${toEmail} via Brevo.`);
   } catch (error) {
-    console.error("Error sending OTP email:", error);
-    throw new Error("Could not send email");
+    console.error("Error sending OTP email:", error.message || error);
+    throw error;
   }
 };
 

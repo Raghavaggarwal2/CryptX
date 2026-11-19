@@ -30,7 +30,7 @@ const requestSignup = async (req, res) => {
     res.status(200).json({ message: "OTP sent to email." });
   } catch (error) {
     console.error("Request signup error:", error);
-    res.status(500).json({ error: "Failed to send OTP" });
+    res.status(500).json({ error: error.message || "Failed to send OTP" });
   }
 };
 
@@ -133,7 +133,7 @@ const forgotPassword = async (req, res) => {
     res.json({ message: "If the email exists, an OTP was sent." });
   } catch (error) {
     console.error("Forgot password error:", error);
-    res.status(500).json({ error: "Process failed" });
+    res.status(500).json({ error: error.message || "Process failed" });
   }
 };
 
